@@ -2,11 +2,14 @@
 
 import rospy
 import numpy as np
+import matplotlib.pyplot as plt
 from tf.transformations import quaternion_multiply
-
-from geometry_msgs.msg import Quaternion, Pose
+from geometry_msgs.msg import Quaternion, Point, Pose
 
 from plugins.orbslam2_subscriber import ORBSLAM2Subscriber
+
+
+color_palette = ['#0055AA', '#CC0022', '#DDB800', '#007728', '#009FEE', '#AA008E']
 
 
 def unpack_quaternion(q):
@@ -25,13 +28,25 @@ def increment_xyz(a, b):
     a.y += b.y
     a.z += b.z
 
+def transform_pose(pose, transform):
+    '''adds translation to position, multiplies rotation to orientation'''
+    increment_xyz(pose.position, transform.translation)
+    pose.orientation = get_quaternion(quaternion_multiply(unpack_quaternion(pose.orientation), transform.rotation))
+
+def copy_pose(pose):
+    p = pose.position
+    o = pose.orientation
+    return Pose(position=Point(p.x, p.y, p.z), orientation=Quaternion(o.x, o.y, o.z, o.w))
 
 
 class LocalizationSwitch(object):
-    def __init__(self, callback=None):
+    def __init__(self, callback=None, plot_mode=False):
         '''`callback` can be a function of `Pose` to call on every update'''
         # subscriber list sorted by descending priority
         self.subscribers = []
+        # for plotting
+        self.plot_mode = plot_mode
+        self.pose_history = []
         # pose to which the updates are applied
         self.pose = Pose()
         self.callback = callback
@@ -40,6 +55,7 @@ class LocalizationSwitch(object):
         '''adds an instance of an AbstractLocalizationSubscriber subclass with.
            subscribers added earlier will have a higher priority.'''
         self.subscribers.append(subscriber)
+        self.pose_history.append([Pose()])
         # set an individual callback
         idx = len(self.subscribers) - 1
         subscriber.set_callback(lambda delta: self.__callback__(idx, delta))
@@ -50,11 +66,23 @@ class LocalizationSwitch(object):
 
     def update_pose(self, transform):
         '''applies a `transform` to the internal pose'''
-        increment_xyz(self.pose.position, transform.translation)
-        self.pose.orientation = get_quaternion(quaternion_multiply(unpack_quaternion(self.pose.orientation), transform.rotation))
+        transform_pose(self.pose, transform)
 
     def __callback__(self, subscriber_idx, delta_transform):
         '''master callback for all subscribers'''
+        if self.plot_mode:
+            # store every pose
+            # TODO: maybe don't
+            pose = copy_pose(self.pose_history[subscriber_idx][-1])
+            x1, y1, = pose.position.x, pose.position.y
+            transform_pose(pose, delta_transform)
+            x2, y2, = pose.position.x, pose.position.y
+            self.pose_history[subscriber_idx].append(pose)
+
+            plt.plot([x1, x2], [y1, y2], color=color_palette[subscriber_idx % len(color_palette)])
+            plt.axes().set_aspect('equal', 'datalim')
+            plt.pause(0.05)
+
         if self.is_prior_disabled(subscriber_idx):
             # update pose
             self.update_pose(delta_transform)
@@ -70,7 +98,7 @@ class LocalizationSwitchNode(object):
         self.output_pose_topic = '~pose'
         #rospy.get_param('~subscribers', '') # TODO: external subscriber config
 
-        self.localization_switch = LocalizationSwitch(callback=self.pose_callback)
+        self.localization_switch = LocalizationSwitch(callback=self.pose_callback, plot_mode=True)
         # just add an ORBSLAM2Subscriber for now
         self.localization_switch.append_subscriber(ORBSLAM2Subscriber())
 
