@@ -103,7 +103,7 @@ class LocalizationSwitch(object):
 
     def __callback__(self, subscriber_idx, delta_transform):
         '''master callback for all subscribers'''
-        if self.plot_mode == 'positions':
+        if self.plot_mode:
             # rotate transform if needed
             if self.plot_rotations[subscriber_idx] is not None:
                 t = delta_transform.translation
