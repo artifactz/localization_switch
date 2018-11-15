@@ -8,6 +8,8 @@ from geometry_msgs.msg import Quaternion, Point, Pose, Vector3
 import threading
 
 from plugins.orbslam2_subscriber import ORBSLAM2Subscriber
+from plugins.gps_subscriber import GPSSubscriber
+from plugins.pose_subscriber import PoseSubscriber
 
 
 color_palette = ['#0055AA', '#CC0022', '#DDB800', '#007728', '#009FEE', '#AA008E']
@@ -176,8 +178,10 @@ class LocalizationSwitchNode(object):
         #rospy.get_param('~subscribers', '') # TODO: external subscriber config
 
         self.localization_switch = LocalizationSwitch(callback=self.pose_callback, plot_mode=True)
-        # just add an ORBSLAM2Subscriber for now
+        # just add hard-coded subscribers for now
+        self.localization_switch.append_subscriber(GPSSubscriber(), plot_yaw=-1.85) # always disabled
         self.localization_switch.append_subscriber(ORBSLAM2Subscriber())
+        self.localization_switch.append_subscriber(PoseSubscriber())
 
         # pose publisher
         self.pub_pose = rospy.Publisher(self.output_pose_topic, Pose, queue_size=10)
