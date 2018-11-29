@@ -3,6 +3,7 @@
 import rospy
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from tf.transformations import quaternion_multiply, rotation_matrix
 from geometry_msgs.msg import Quaternion, Point, Pose, Vector3
 import threading
@@ -16,12 +17,11 @@ color_palette = ['#0055AA', '#CC0022', '#DDB800', '#007728', '#009FEE', '#AA008E
 
 
 def get_plot_color(subscriber_idx, enabled):
-    '''returns a subsciber's color, which is darker/grayer when disabled.'''
-    c = color_palette[subscriber_idx % len(color_palette)]
-    if not enabled:
-        # mix with 50% gray
-        r, g, b = map(lambda s: int(s, 16), [c[1:3], c[3:5], c[5:7]])
-        c = '#%X%X%X' % tuple(map(int, [.5 * r + 64, .5 * g + 64, .5 * b + 64]))
+    '''returns a subsciber's or the internal poses' color or
+       black for the currently used (`enabled`) subscriber.'''
+    c = color_palette[(subscriber_idx + 1) % len(color_palette)] # idx -1 is the internal pose
+    if subscriber_idx > -1 and enabled:
+        c = 'black'
     return c
 
 def unpack_quaternion(q):
@@ -163,10 +163,17 @@ class LocalizationSwitch(object):
                         start_idx = pose_idx
                     prev_enabled = enabled
 
-            # plot merged path
+            # plot merged path (internal poses)
             self.__plot_positions__(-1)
 
-            plt.legend()
+            # custom legend
+            legend_colors = [get_plot_color(i, False) for i in range(-1, len(self.subscribers))]
+            legend_colors.append(get_plot_color(0, True))
+            legend_lines = [Line2D([0], [0], color=c, lw=3) for c in legend_colors] # TODO test!
+            legend_labels = [type(self.subscribers[i]).__name__ for i in range(len(self.subscribers))]
+            legend_labels = ['merged'] + legend_labels + ['chosen']
+            plt.legend(legend_lines, legend_labels)
+            # draw and sleep
             plt.pause(1)
 
 
