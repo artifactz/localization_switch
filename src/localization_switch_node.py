@@ -4,8 +4,9 @@ import rospy
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-from tf.transformations import quaternion_multiply, rotation_matrix
-from geometry_msgs.msg import Quaternion, Point, Pose, Vector3
+from tf.transformations import quaternion_matrix, quaternion_from_matrix, quaternion_from_euler
+from geometry_msgs.msg import Quaternion, Point, Pose, Vector3, TransformStamped, PoseStamped
+from tf2_geometry_msgs import do_transform_pose
 import threading
 
 from plugins.orbslam2_subscriber import ORBSLAM2Subscriber
@@ -40,10 +41,22 @@ def increment_xyz(a, b):
     a.y += b.y
     a.z += b.z
 
+def translation_rotation_to_matrix(translation, rotation):
+    '''returns an affine transformation matrix from a Vector3/Point and a quaternion'''
+    mat = quaternion_matrix(unpack_quaternion(rotation))
+    mat[:3, 3] = [translation.x, translation.y, translation.z]
+    return mat
+
 def transform_pose(pose, transform):
-    '''adds translation to position, multiplies rotation to orientation'''
-    increment_xyz(pose.position, transform.translation)
-    pose.orientation = get_quaternion(quaternion_multiply(unpack_quaternion(pose.orientation), transform.rotation))
+    '''applies a transformation to a pose'''
+    # convert to affine transformation matrices
+    pose_mat = translation_rotation_to_matrix(pose.position, pose.orientation)
+    trans_mat = translation_rotation_to_matrix(transform.translation, transform.rotation)
+    # apply
+    new_pose_mat = np.dot(pose_mat, trans_mat)
+    # convert back to pose
+    pose.position = Vector3(*new_pose_mat[:3, 3])
+    pose.orientation = Quaternion(*quaternion_from_matrix(new_pose_mat))
 
 def copy_pose(pose):
     p = pose.position
@@ -78,9 +91,10 @@ class LocalizationSwitch(object):
            `plot_yaw` can depict a plot rotation.'''
         self.subscribers.append(subscriber)
         if self.plot_mode:
-            r = None if plot_yaw is None else rotation_matrix(plot_yaw, [0, 0, 1])
-            self.plot_rotations.append(r)
-            self.pose_history.append([Pose()])
+            initial_pose = Pose()
+            # rotate if needed
+            initial_pose.orientation = Quaternion(0, 0, 0, 1) if plot_yaw is None else Quaternion(*quaternion_from_euler(0, 0, plot_yaw))
+            self.pose_history.append([initial_pose])
             self.enabled_history.append([True])
         # set an individual callback
         idx = len(self.subscribers) - 1
@@ -104,12 +118,6 @@ class LocalizationSwitch(object):
     def __callback__(self, subscriber_idx, delta_transform):
         '''master callback for all subscribers'''
         if self.plot_mode:
-            # rotate transform if needed
-            if self.plot_rotations[subscriber_idx] is not None:
-                t = delta_transform.translation
-                translation_hom = [t.x, t.y, t.z, 1.]
-                transformed_hom = np.dot(self.plot_rotations[subscriber_idx], translation_hom)
-                delta_transform.translation = Vector3(*(transformed_hom[:3]))
             # transform last pose to get the current one
             pose = copy_pose(self.pose_history[subscriber_idx + 1][-1])
             transform_pose(pose, delta_transform)

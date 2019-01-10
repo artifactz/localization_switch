@@ -1,17 +1,7 @@
 import rospy
-from geometry_msgs.msg import Quaternion, Transform, Vector3, Pose, PoseWithCovarianceStamped
-from tf.transformations import quaternion_multiply, quaternion_from_euler, euler_from_quaternion
+from geometry_msgs.msg import PoseWithCovarianceStamped
 
-from plugin_base import AbstractLocalizationSubscriber
-
-
-def unpack_quaternion(q):
-    '''to tuple'''
-    return q.x, q.y, q.z, q.w
-
-def get_vector3_subtraction(a, b):
-    '''subtracts an xyz-object `b` from `a` and returns the result as Vector3'''
-    return Vector3(a.x - b.x, a.y - b.y, a.z - b.z)
+from plugin_base import AbstractLocalizationSubscriber, get_relative_transform
 
 
 class PoseSubscriber(AbstractLocalizationSubscriber):
@@ -30,14 +20,11 @@ class PoseSubscriber(AbstractLocalizationSubscriber):
     def pose_callback(self, msg):
         '''handles arrival of pose messages'''
         if self.last_pose is not None:
-            # position difference
-            translation = get_vector3_subtraction(msg.pose.pose.position, self.last_pose.position)
-            # orientation difference
-            q1_inv = self.last_pose.orientation
-            q1_inv = Quaternion(q1_inv.x, q1_inv.y, q1_inv.z, -q1_inv.w)    # copy and inverse
-            rot = quaternion_multiply(unpack_quaternion(q1_inv), unpack_quaternion(msg.pose.pose.orientation))
-            # construct a transform
-            delta_transform = Transform(translation=translation, rotation=rot)
+            # get difference
+            delta_transform = get_relative_transform(
+                self.last_pose.position, self.last_pose.orientation,
+                msg.pose.pose.position, msg.pose.pose.orientation)
+
             # hand in the update
             self.callback(delta_transform)
 
