@@ -5,11 +5,11 @@ from plugin_base import AbstractLocalizationSubscriber, get_relative_transform
 
 
 class PoseSubscriber(AbstractLocalizationSubscriber):
-    def __init__(self, timeout=1., initial_yaw=None):
+    def __init__(self, pose_topic='/pose', timeout=1.):
         super(PoseSubscriber, self).__init__()
         self.enabled = False
         # params
-        self.pose_topic = '/simple_pixel_flow/pose'
+        self.pose_topic = pose_topic
         self.sub_pose = rospy.Subscriber(self.pose_topic, PoseWithCovarianceStamped, self.pose_callback)
 
         self.last_pose = None

@@ -1,0 +1,7 @@
+<launch>
+    <node pkg="localization_switch" type="localization_switch_node.py" name="localization_switch" output="screen">
+        <param name="output_pose_topic" value="~pose" />
+        <param name="plot_mode" value="false" />
+        <param name="subscribers" value="[{type: ORBSLAM2Subscriber, timeout_reset: 5.0}, {type: PoseSubscriber, pose_topic: /pose}]" />
+    </node>
+</launch>

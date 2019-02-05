@@ -8,6 +8,7 @@ from tf.transformations import quaternion_matrix, quaternion_from_matrix, quater
 from geometry_msgs.msg import Quaternion, Point, Pose, Vector3, TransformStamped, PoseStamped
 from tf2_geometry_msgs import do_transform_pose
 import threading
+import yaml
 
 from plugins.orbslam2_subscriber import ORBSLAM2Subscriber
 from plugins.gps_subscriber import GPSSubscriber
@@ -16,6 +17,18 @@ from plugins.pose_subscriber import PoseSubscriber
 
 color_palette = ['#0055AA', '#CC0022', '#DDB800', '#007728', '#009FEE', '#AA008E']
 
+
+def get_subscriber_from_string(name):
+    '''converts a subscriber name string to its actual type'''
+    types = {
+        'PoseSubscriber': PoseSubscriber,
+        'GPSSubscriber': GPSSubscriber,
+        'ORBSLAM2Subscriber': ORBSLAM2Subscriber
+    }
+    try:
+        return types[name]
+    except KeyError:
+        raise RuntimeError('unknown subscriber type: %s' % name)
 
 def get_plot_color(subscriber_idx, enabled):
     '''returns a subsciber's or the internal poses' color or
@@ -189,17 +202,15 @@ class LocalizationSwitchNode(object):
     def __init__(self):
         rospy.init_node('localization_switch_node')
         # params
-        self.output_pose_topic = '~pose'
-        #rospy.get_param('~subscribers', '') # TODO: external subscriber config
+        output_pose_topic = rospy.get_param('~output_pose_topic', '~pose')
+        plot_mode = rospy.get_param('~plot_mode', False)
+        yaml_string = rospy.get_param('~subscribers', '')
 
-        self.localization_switch = LocalizationSwitch(callback=self.pose_callback, plot_mode=True)
-        # just add hard-coded subscribers for now
-        self.localization_switch.append_subscriber(GPSSubscriber(), plot_yaw=-1.85) # always disabled
-        self.localization_switch.append_subscriber(ORBSLAM2Subscriber())
-        self.localization_switch.append_subscriber(PoseSubscriber())
+        self.localization_switch = LocalizationSwitch(callback=self.pose_callback, plot_mode=plot_mode)
+        self.setup_subscribers(yaml_string)
 
         # pose publisher
-        self.pub_pose = rospy.Publisher(self.output_pose_topic, PoseStamped, queue_size=10)
+        self.pub_pose = rospy.Publisher(output_pose_topic, PoseStamped, queue_size=10)
 
     def pose_callback(self, pose):
         '''handles the arrival of new poses from LocalizationSwitch'''
@@ -208,6 +219,18 @@ class LocalizationSwitchNode(object):
         pose_stamped.header.stamp = rospy.get_rostime() # TODO: real timestamps would be nice
         pose_stamped.pose = pose
         self.pub_pose.publish(pose_stamped)
+
+    def setup_subscribers(self, yaml_string):
+        '''initializes localization methods from a yaml string'''
+        yaml_object = yaml.load(yaml_string)
+        for subscriber_config in yaml_object:
+            # get localization method type
+            t = get_subscriber_from_string(subscriber_config['type'])
+            # remove type from dict to use the remaining items as as kwargs
+            del subscriber_config['type']
+            self.localization_switch.append_subscriber(t(**subscriber_config))
+        if len(self.localization_switch.subscribers) == 0:
+            rospy.logwarn('no subscribers available')
 
     def spin(self):
         rospy.spin()
