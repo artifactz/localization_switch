@@ -5,7 +5,8 @@ from plugin_base import AbstractLocalizationSubscriber, get_relative_transform
 
 
 class PoseSubscriber(AbstractLocalizationSubscriber):
-    def __init__(self, pose_topic='/pose', timeout=1.):
+    '''subscribes to a PoseWithCovarianceStamped topic and hands in delta transforms to its callback'''
+    def __init__(self, pose_topic='/pose', timeout=1.): # TODO: implement timeout
         super(PoseSubscriber, self).__init__()
         self.enabled = False
         # params
@@ -30,4 +31,4 @@ class PoseSubscriber(AbstractLocalizationSubscriber):
 
         self.last_pose = msg.pose.pose
 
-        self.enabled = True # TODO
+        self.enabled = True

@@ -26,6 +26,7 @@ def get_relative_transform(ref_position, ref_orientation, translation, rotation)
 
 
 class AbstractLocalizationSubscriber(object):
+    '''base class for subscribers'''
     def __init__(self):
         self.callback = None
 

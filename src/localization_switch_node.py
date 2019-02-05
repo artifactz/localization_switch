@@ -78,6 +78,7 @@ def copy_pose(pose):
 
 
 class LocalizationSwitch(object):
+    '''manages and processes subscribers, keeps track of an internal pose and calls a callback on every update'''
     def __init__(self, callback=None, plot_mode=False):
         '''`callback` can be a function of `Pose` to call on every update'''
         # subscriber list sorted by descending priority
@@ -96,6 +97,7 @@ class LocalizationSwitch(object):
             self.plot_rotations = []
             # detach plotting from main thread
             self.plot_thread = threading.Thread(target=self.plot_positions)
+            self.plot_thread.daemon = True
             self.plot_thread.start()
 
     def append_subscriber(self, subscriber, plot_yaw=None):
@@ -199,6 +201,7 @@ class LocalizationSwitch(object):
 
 
 class LocalizationSwitchNode(object):
+    '''reads ROS params, initializes the LocalizationSwitch and keeps publishing the internal pose'''
     def __init__(self):
         rospy.init_node('localization_switch_node')
         # params
@@ -217,6 +220,7 @@ class LocalizationSwitchNode(object):
         # just publish the pose
         pose_stamped = PoseStamped()
         pose_stamped.header.stamp = rospy.get_rostime() # TODO: real timestamps would be nice
+        pose_stamped.header.frame_id = 'world'
         pose_stamped.pose = pose
         self.pub_pose.publish(pose_stamped)
 

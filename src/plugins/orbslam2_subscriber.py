@@ -11,6 +11,8 @@ from plugin_base import AbstractLocalizationSubscriber, get_relative_transform
 
 
 class ORBSLAM2Subscriber(AbstractLocalizationSubscriber):
+    '''subscribes to an ORBState topic, polls ORBSLAM2 TFs and hands in delta transforms to its callback.
+       requests an ORBSLAM2 reset when lost.'''
     def __init__(self, timeout_reset=5.):
         '''`timeout_reset`: sets after how many seconds of ORBState.LOST to call a system_reset'''
         super(ORBSLAM2Subscriber, self).__init__()
@@ -19,7 +21,7 @@ class ORBSLAM2Subscriber(AbstractLocalizationSubscriber):
         self.base_link_frame_id = '/ORB_base_link' # '/orb_slam2/camera'
         self.world_frame_id = '/orb_slam2/map' # '/orb_slam2/world'
         self.state_topic = '/orb_slam2/state'
-        self.update_rate = 30.
+        self.update_rate = 30.  # TODO: ros params
         self.timeout_reset = timeout_reset
 
         self.sub_state = rospy.Subscriber(self.state_topic, ORBState, self.state_callback)

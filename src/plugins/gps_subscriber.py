@@ -17,7 +17,9 @@ def get_vector3_subtraction(a, b):
 
 
 class GPSSubscriber(AbstractLocalizationSubscriber):
-    def __init__(self, initial_heading=0.):
+    '''subscribes to a NavSatFix topic and hands in delta transforms to its callback.
+       lacks rotation due to the input only being GPS.'''
+    def __init__(self, initial_heading=0.): # TODO
         super(GPSSubscriber, self).__init__()
         # params
         self.gps_topic = '/mavros/global_position/global'
