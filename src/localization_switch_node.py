@@ -199,12 +199,15 @@ class LocalizationSwitchNode(object):
         self.localization_switch.append_subscriber(PoseSubscriber())
 
         # pose publisher
-        self.pub_pose = rospy.Publisher(self.output_pose_topic, Pose, queue_size=10)
+        self.pub_pose = rospy.Publisher(self.output_pose_topic, PoseStamped, queue_size=10)
 
     def pose_callback(self, pose):
         '''handles the arrival of new poses from LocalizationSwitch'''
         # just publish the pose
-        self.pub_pose.publish(pose)
+        pose_stamped = PoseStamped()
+        pose_stamped.header.stamp = rospy.get_rostime() # TODO: real timestamps would be nice
+        pose_stamped.pose = pose
+        self.pub_pose.publish(pose_stamped)
 
     def spin(self):
         rospy.spin()
