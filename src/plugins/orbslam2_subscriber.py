@@ -24,8 +24,6 @@ class ORBSLAM2Subscriber(AbstractLocalizationSubscriber):
         self.update_rate = 30.  # TODO: ros params
         self.timeout_reset = timeout_reset
 
-        self.sub_state = rospy.Subscriber(self.state_topic, ORBState, self.state_callback)
-
         self.srv_reset = None
         # detach waiting for services from main thread, so everything works without them as well
         threading.Thread(target=self.__init_services__).start()
@@ -43,6 +41,8 @@ class ORBSLAM2Subscriber(AbstractLocalizationSubscriber):
         self.first_ok_time = None
         # timeout_reset cooldown counter
         self.last_reset_time = None
+
+        self.sub_state = rospy.Subscriber(self.state_topic, ORBState, self.state_callback)
 
         # detach TF polling from main thread, so __init__() can finish
         self.tf_thread = threading.Thread(target=self.poll_tf)
