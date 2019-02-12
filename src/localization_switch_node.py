@@ -10,25 +10,12 @@ from tf2_geometry_msgs import do_transform_pose
 import threading
 import yaml
 
-from plugins.orbslam2_subscriber import ORBSLAM2Subscriber
-from plugins.gps_subscriber import GPSSubscriber
-from plugins.pose_subscriber import PoseSubscriber
+from plugins.index import get_subscriber_from_string
 
 
 color_palette = ['#0055AA', '#CC0022', '#DDB800', '#007728', '#009FEE', '#AA008E']
 
 
-def get_subscriber_from_string(name):
-    '''converts a subscriber name string to its actual type'''
-    types = {
-        'PoseSubscriber': PoseSubscriber,
-        'GPSSubscriber': GPSSubscriber,
-        'ORBSLAM2Subscriber': ORBSLAM2Subscriber
-    }
-    try:
-        return types[name]
-    except KeyError:
-        raise RuntimeError('unknown subscriber type: %s' % name)
 
 def get_plot_color(subscriber_idx, enabled):
     '''returns a subsciber's or the internal poses' color or
