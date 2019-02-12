@@ -8,7 +8,9 @@ def unpack_quaternion(q):
     return q.x, q.y, q.z, q.w
 
 def get_relative_transform(ref_position, ref_orientation, translation, rotation):
-    '''returns a transform/pose from the perspective of reference transform/pose'''
+    '''returns a pose (geometry_msgs/Transform) from the perspective of a reference pose.
+       `ref_position` and `translation` may be given as any xyz-object (e.g. geometry_msgs/Vector3).
+       `ref_orientation` and `rotation` are quaternions (geometry_msgs/Quaternion).'''
     # rotation
     q1_i = quaternion_inverse(unpack_quaternion(ref_orientation))
     q2 = unpack_quaternion(rotation)

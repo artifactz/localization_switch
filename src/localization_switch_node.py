@@ -36,19 +36,19 @@ def get_quaternion(a):
     return q
 
 def increment_xyz(a, b):
-    '''adds xyz-objects `a` and `b` and stores the result in `a`'''
+    '''adds xyz-objects (e.g. geometry_msgs/Vector3) `a` and `b` and stores the result in `a`'''
     a.x += b.x
     a.y += b.y
     a.z += b.z
 
 def translation_rotation_to_matrix(translation, rotation):
-    '''returns an affine transformation matrix from a Vector3/Point and a quaternion'''
+    '''returns an affine transformation matrix from a Vector3 or Point and a geometry_msgs/Quaternion'''
     mat = quaternion_matrix(unpack_quaternion(rotation))
     mat[:3, 3] = [translation.x, translation.y, translation.z]
     return mat
 
 def transform_pose(pose, transform):
-    '''applies a transformation to a pose'''
+    '''applies a transformation (geometry_msgs/Transform) to a pose (geometry_msgs/Pose)'''
     # convert to affine transformation matrices
     pose_mat = translation_rotation_to_matrix(pose.position, pose.orientation)
     trans_mat = translation_rotation_to_matrix(transform.translation, transform.rotation)
@@ -111,7 +111,7 @@ class LocalizationSwitch(object):
         return self.is_prior_disabled(idx) and self.subscribers[idx].is_enabled()
 
     def update_pose(self, transform):
-        '''applies a `transform` to the internal pose'''
+        '''applies a transformation (geometry_msgs/Transform) to the internal pose'''
         transform_pose(self.pose, transform)
         if self.plot_mode:
             # store a copy of the current internal pose
@@ -203,7 +203,7 @@ class LocalizationSwitchNode(object):
         self.pub_pose = rospy.Publisher(output_pose_topic, PoseStamped, queue_size=10)
 
     def pose_callback(self, pose):
-        '''handles the arrival of new poses from LocalizationSwitch'''
+        '''handles the arrival of new poses (geometry_msgs/Pose) from LocalizationSwitch'''
         # just publish the pose
         pose_stamped = PoseStamped()
         pose_stamped.header.stamp = rospy.get_rostime() # TODO: real timestamps would be nice
