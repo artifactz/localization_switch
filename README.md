@@ -2,7 +2,7 @@
 
 *ROS localization method multiplexer*
 
-This is a slim ROS library written in Python able to bundle multiple localization methods. It subscribes to their output topic, keeps track of their state and applies the pose transformations of the best currently available method to a resulting pose which is republished on every update.
+This is a slim ROS library written in Python able to bundle multiple localization methods. It subscribes to their output topic, keeps track of their state and applies the pose transformations of the best (based on priority) currently available method to a resulting pose which is republished on every update.
 
 ## Running this node
 
@@ -34,6 +34,10 @@ Specifies the pose topic to subscribe to.
 
 `timeout_reset` (`float`, default: `5.0`)  
 Specifies the time needed for the ORBSLAM2 state not to be `OK` (mainly `LOST`) to request a ORBSLAM2 restart.
+
+## Extending this node
+
+Additional subscriber types may be added in `src/plugins/` by inheriting from `AbstractLocalizationSubscriber` and adding them to the [plugin index](src/plugins/index.py).
 
 ## Dependencies
 
