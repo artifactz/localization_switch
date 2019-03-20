@@ -2,6 +2,7 @@ import rospy
 from geometry_msgs.msg import Quaternion, Transform, Vector3
 from sensor_msgs.msg import NavSatFix
 from alvinxy import alvinxy
+from tf.transformations import quaternion_from_euler
 
 from plugin_base import AbstractLocalizationSubscriber
 import plotting
@@ -15,7 +16,7 @@ def get_vector3_subtraction(a, b):
 class GPSSubscriber(AbstractLocalizationSubscriber):
     '''subscribes to a NavSatFix topic and hands in delta transforms to its callback.
        lacks rotation due to the input only being GPS.'''
-    def __init__(self, initial_heading=0.): # TODO
+    def __init__(self, initial_heading=0., plot=False):
         super(GPSSubscriber, self).__init__(plot)
         # params
         self.gps_topic = '/mavros/global_position/global'
@@ -23,6 +24,10 @@ class GPSSubscriber(AbstractLocalizationSubscriber):
 
         self.orig_ll = None
         self.last_position = Vector3()
+
+        if self.do_plot and initial_heading != 0.:
+            q = Quaternion(*quaternion_from_euler(0, 0, initial_heading))
+            plotting.add_pose(self, Transform(translation=Vector3(0., 0., 0.), rotation=q))
 
     def is_enabled(self):
         '''GPS is only used for plotting'''
