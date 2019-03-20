@@ -4,7 +4,9 @@
 from orbslam2_subscriber import ORBSLAM2Subscriber
 from gps_subscriber import GPSSubscriber
 from pose_subscriber import PoseSubscriber
+from imu_subscriber import ImuSubscriber
 from priority_controller import PriorityController
+from imu_controller import ImuController
 
 
 def build_object(yaml_dict):
@@ -23,7 +25,9 @@ def get_type_from_string(name):
         'PoseSubscriber': PoseSubscriber,
         'GPSSubscriber': GPSSubscriber,
         'ORBSLAM2Subscriber': ORBSLAM2Subscriber,
-        'PriorityController': PriorityController
+        'ImuSubscriber': ImuSubscriber,
+        'PriorityController': PriorityController,
+        'ImuController': ImuController
     }
     try:
         return types[name]
