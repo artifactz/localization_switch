@@ -1,15 +1,11 @@
 import rospy
-from tf.msg import tfMessage
 from geometry_msgs.msg import Quaternion, Transform, Vector3
 from sensor_msgs.msg import NavSatFix
 from alvinxy import alvinxy
 
 from plugin_base import AbstractLocalizationSubscriber
+import plotting
 
-
-def unpack_quaternion(q):
-    '''to tuple'''
-    return q.x, q.y, q.z, q.w
 
 def get_vector3_subtraction(a, b):
     '''subtracts an xyz-object `b` from `a` and returns the result as Vector3'''
@@ -20,7 +16,7 @@ class GPSSubscriber(AbstractLocalizationSubscriber):
     '''subscribes to a NavSatFix topic and hands in delta transforms to its callback.
        lacks rotation due to the input only being GPS.'''
     def __init__(self, initial_heading=0.): # TODO
-        super(GPSSubscriber, self).__init__()
+        super(GPSSubscriber, self).__init__(plot)
         # params
         self.gps_topic = '/mavros/global_position/global'
         self.sub_gps = rospy.Subscriber(self.gps_topic, NavSatFix, self.gps_callback)
@@ -50,5 +46,7 @@ class GPSSubscriber(AbstractLocalizationSubscriber):
 
         # hand in the update
         self.callback(delta_transform)
+        if self.do_plot:
+            plotting.add_pose(self, delta_transform)
 
         self.last_position = position

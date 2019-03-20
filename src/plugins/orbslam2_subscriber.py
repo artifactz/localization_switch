@@ -1,6 +1,5 @@
 import rospy
 import tf2_ros
-from tf.msg import tfMessage
 from orb_slam2_ros.msg import ORBState
 from orb_slam2_ros.srv import ResetSystem
 
@@ -8,14 +7,15 @@ import threading
 from collections import deque
 
 from plugin_base import AbstractLocalizationSubscriber, get_relative_transform
+import plotting
 
 
 class ORBSLAM2Subscriber(AbstractLocalizationSubscriber):
     '''subscribes to an ORBState topic, polls ORBSLAM2 TFs and hands in delta transforms to its callback.
        requests an ORBSLAM2 reset when lost.'''
-    def __init__(self, timeout_reset=5.):
+    def __init__(self, timeout_reset=5., plot=False):
         '''`timeout_reset`: sets after how many seconds of ORBState.LOST to call a system_reset'''
-        super(ORBSLAM2Subscriber, self).__init__()
+        super(ORBSLAM2Subscriber, self).__init__(plot)
         self.enabled = False
         # params
         self.base_link_frame_id = '/ORB_base_link' # '/orb_slam2/camera'
@@ -85,7 +85,7 @@ class ORBSLAM2Subscriber(AbstractLocalizationSubscriber):
                 self.first_ok_time = msg.header.stamp
             self.last_ok_time = msg.header.stamp
 
-            while len(self.tf_queue) > 1: # need two or moar for a diff
+            while len(self.tf_queue) > 1:  # need two or moar for a diff
                 # discard an invalid TF
                 if self.tf_queue[0].header.stamp < self.first_ok_time:
                     self.tf_queue.popleft()
@@ -113,6 +113,8 @@ class ORBSLAM2Subscriber(AbstractLocalizationSubscriber):
 
                 # hand in the update
                 self.callback(delta_transform)
+                if self.do_plot:
+                    plotting.add_pose(self, delta_transform)
 
                 rospy.logdebug('ORBSLAM2Subscriber: tf processed')
 
