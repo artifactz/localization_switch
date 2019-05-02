@@ -30,10 +30,12 @@ class TransformQueue(object):
         ''':return '''
         if self.__rotation_sum__:
             return self.__rotation_sum__
+        result = [0, 0, 0, 1]
+        if len(self.q) == 0:
+            return result, 0
         with self.q_mutex:
             duration = (self.q[-1][1] - self.q[0][1]).to_sec()
             rotations = [unpack_quaternion(delta_transform.rotation) for delta_transform, _ in self.q]
-        result = [0, 0, 0, 1]
         for rotation in rotations:
             result = quaternion_multiply(result, rotation)
         self.__rotation_sum__ = result, duration
@@ -86,7 +88,7 @@ class ImuController(PriorityController):
         delta_rot_euler = euler_from_quaternion(delta_rot)
         total_err = np.dot(delta_rot_euler, delta_rot_euler) / 3.
         # error per second
-        errps = total_err / ((imu_dur + sub_dur) / 2.)
+        errps = np.inf if imu_dur + sub_dur == 0 else total_err / ((imu_dur + sub_dur) / 2.)
         self.subscriber_errors[subscriber_idx] = errps
 
         rospy.loginfo_throttle(10, 'ImuController: current errors are %s' % self.subscriber_errors)
