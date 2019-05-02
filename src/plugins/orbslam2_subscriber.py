@@ -13,9 +13,9 @@ import plotting
 class ORBSLAM2Subscriber(AbstractLocalizationSubscriber):
     '''subscribes to an ORBState topic, polls ORBSLAM2 TFs and hands in delta transforms to its callback.
        requests an ORBSLAM2 reset when lost.'''
-    def __init__(self, timeout_reset=5., plot=False):
+    def __init__(self, timeout_reset=5., **kwargs):
         '''`timeout_reset`: sets after how many seconds of ORBState.LOST to call a system_reset'''
-        super(ORBSLAM2Subscriber, self).__init__(plot)
+        super(ORBSLAM2Subscriber, self).__init__(**kwargs)
         self.enabled = False
         # params
         self.base_link_frame_id = '/ORB_base_link' # '/orb_slam2/camera'

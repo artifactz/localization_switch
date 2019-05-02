@@ -29,8 +29,8 @@ def latlon_to_dxdy(lat1, lon1, lat2, lon2):
 class GPSSubscriber(AbstractLocalizationSubscriber):
     '''subscribes to a NavSatFix topic and hands in delta transforms to its callback.
        lacks rotation due to the input only being GPS.'''
-    def __init__(self, initial_heading=0., plot=False):
-        super(GPSSubscriber, self).__init__(plot)
+    def __init__(self, initial_heading=0., **kwargs):
+        super(GPSSubscriber, self).__init__(**kwargs)
         # params
         self.gps_topic = '/mavros/global_position/global'
         self.sub_gps = rospy.Subscriber(self.gps_topic, NavSatFix, self.gps_callback)

@@ -17,8 +17,8 @@ def get_quaternion(a):
 
 class ImuSubscriber(AbstractLocalizationSubscriber):
     '''subscribes to an Imu topic and hands in delta transforms to its callback.'''
-    def __init__(self, plot=False):
-        super(ImuSubscriber, self).__init__(plot)
+    def __init__(self, **kwargs):
+        super(ImuSubscriber, self).__init__(**kwargs)
         # params
         self.gravity = 9.80665
         self.imu_topic = '/mavros/imu/data'

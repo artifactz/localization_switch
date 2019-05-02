@@ -7,8 +7,8 @@ import plotting
 
 class PoseSubscriber(AbstractLocalizationSubscriber):
     '''subscribes to a PoseWithCovarianceStamped topic and hands in delta transforms to its callback'''
-    def __init__(self, pose_topic='/pose', timeout=1., plot=False):  # TODO: implement timeout
-        super(PoseSubscriber, self).__init__(plot)
+    def __init__(self, pose_topic='/pose', timeout=1., **kwargs):  # TODO: implement timeout
+        super(PoseSubscriber, self).__init__(**kwargs)
         self.enabled = False
         # params
         self.pose_topic = pose_topic
