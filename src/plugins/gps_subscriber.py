@@ -1,7 +1,7 @@
 import rospy
 from geometry_msgs.msg import Quaternion, Transform, Vector3
 from sensor_msgs.msg import NavSatFix
-from alvinxy import alvinxy
+import math
 from tf.transformations import quaternion_from_euler
 
 from plugin_base import AbstractLocalizationSubscriber
@@ -11,6 +11,19 @@ import plotting
 def get_vector3_subtraction(a, b):
     '''subtracts an xyz-object `b` from `a` and returns the result as Vector3'''
     return Vector3(a.x - b.x, a.y - b.y, a.z - b.z)
+
+
+def latlon_to_dxdy(lat1, lon1, lat2, lon2):
+    '''computes the metric difference of two latitude/longitude pairs
+       :type lat1 float
+       :type lon1 float
+       :type lat2 float
+       :type lon2 float
+       :rtype tuple(float, float)'''
+    return (
+        (lon1 - lon2) * 40008000. * math.cos((lat1 + lat2) * math.pi / 360.) / 360.,
+        (lat1 - lat2) * 40008000. / 360.
+    )
 
 
 class GPSSubscriber(AbstractLocalizationSubscriber):
@@ -39,7 +52,7 @@ class GPSSubscriber(AbstractLocalizationSubscriber):
             self.orig_ll = msg.latitude, msg.longitude
 
         # position difference
-        x, y = alvinxy.ll2xy(msg.latitude, msg.longitude, *self.orig_ll)
+        x, y = latlon_to_dxdy(msg.latitude, msg.longitude, *self.orig_ll)
         z = msg.altitude
         position = Vector3(x, y, z)
         translation = get_vector3_subtraction(position, self.last_position)
