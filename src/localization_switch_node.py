@@ -1,7 +1,8 @@
 #!/usr/bin/env python2
 
 import rospy
-from geometry_msgs.msg import Pose, PoseStamped
+import tf
+from geometry_msgs.msg import Pose, PoseStamped, Quaternion, Point
 import yaml
 import sys
 
@@ -10,16 +11,32 @@ import plugins.index
 from plugins.plugin_base import transform_pose
 
 
+def get_mavros_pose():
+    ''':returns: the TF from local_origin to fcu as a `Pose`'''
+    tf_listener = tf.TransformListener()
+    for _ in xrange(3):
+        try:
+            trans, rot = tf_listener.lookupTransform('local_origin', 'fcu', rospy.Time(0))
+            return Pose(Point(*trans), Quaternion(*rot))
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            rospy.sleep(.5)  # 0.5 seconds
+    raise RuntimeError('cannot receive MAVROS TF')
+
+
 class PoseManager(object):
     '''holds the root controller, keeps track of an internal pose and calls a callback on every update'''
-    def __init__(self, controller, callback=None, plot_pose=False):
+    def __init__(self, controller, pose=None, callback=None, plot_pose=False):
         ''':param controller: controller to be used containing all necessary subscribers
+           :param geometry_msgs.msg.Pose pose: initial pose (`None` initializes to 0-pose)
            :param function callback: function of :class:`Pose` to call on every update
            :param bool plot_pose: whether to plot the internal pose'''
         self.controller = controller
         self.controller.set_callback(self.__callback__)
         # pose to which the updates are applied
-        self.pose = Pose()  # TODO: orientation 0,0,0,1?
+        if pose is None:
+            self.pose = Pose()  # orientation may be all 0, which is ok (`quaternion_matrix` still returns id)
+        else:
+            self.pose = pose
         # external (publisher) callback function to call
         self.callback = callback
         self.do_plot = plot_pose
@@ -51,12 +68,19 @@ class LocalizationSwitchNode(object):
         output_pose_topic = rospy.get_param('~output_pose_topic', '~pose')
         plot_pose = rospy.get_param('~plot_pose', False)
         yaml_string = rospy.get_param('~controller', '')
+        use_initial_mavros_pose = rospy.get_param('~use_initial_mavros_pose', True)
+
+        if use_initial_mavros_pose:
+            initial_pose = get_mavros_pose()
+        else:
+            initial_pose = None
 
         # build controller
         yaml_dict = yaml.load(yaml_string)
         controller = plugins.index.build_object(yaml_dict)
         if controller:
             self.localization_switch = PoseManager(
+                pose=initial_pose,
                 controller=controller,
                 callback=self.pose_callback,
                 plot_pose=plot_pose
