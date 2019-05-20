@@ -27,9 +27,10 @@ class TransformQueue(object):
         self.__rotation_sum__ = None
 
     def get_rotation_sum(self):
-        ''':return '''
-        if self.__rotation_sum__:
-            return self.__rotation_sum__
+        '''returns a tuple of a rotation Quaternion and its duration in seconds'''
+        with self.q_mutex:
+            if self.__rotation_sum__ is not None:
+                return self.__rotation_sum__
         result = [0, 0, 0, 1]
         if len(self.q) == 0:
             return result, 0
