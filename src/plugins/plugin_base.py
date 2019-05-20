@@ -69,9 +69,12 @@ class TransformProvider(object):
 
 class AbstractLocalizationSubscriber(TransformProvider):
     '''base class for subscribers'''
-    def __init__(self, plot=False):
+    def __init__(self, plot=False, alias=None):
+        ''':param plot: flags this subscriber to be drawn in the plot
+           :param alias: if set, uses this string instead of the type name to label the subscriber'''
         super(AbstractLocalizationSubscriber, self).__init__()
         self.do_plot = plot
+        self.alias = alias
         if self.do_plot:
             plotting.start()
 

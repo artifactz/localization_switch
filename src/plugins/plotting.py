@@ -38,6 +38,9 @@ class Plotter(object):
         # TODO: figure out a way to display active/enabled...
         return self.color[provider] if enabled else 'gray'
 
+    def get_label(self, provider):
+        return provider.alias if hasattr(provider, 'alias') and provider.alias is not None else type(provider).__name__
+
     def __plot_positions__(self, provider, start_idx=0, end_idx=None, enabled=True):
         '''helper function: dispatches a plot call for a path segment'''
         if end_idx is None:
@@ -45,11 +48,9 @@ class Plotter(object):
 
         xs = [self.pose_history[provider][i].position.x for i in xrange(start_idx, end_idx + 1)]
         ys = [self.pose_history[provider][i].position.y for i in xrange(start_idx, end_idx + 1)]
-        label = type(provider).__name__ if start_idx == 0 else None
         plt.plot(
             xs, ys,
             color=self.get_plot_color(provider, enabled),
-            label=label,
             linewidth=2
         )
 
@@ -80,7 +81,7 @@ class Plotter(object):
                     prev_enabled = enabled
 
                 legend_colors.append(self.get_plot_color(provider, True))
-                legend_labels.append(type(provider).__name__)
+                legend_labels.append(self.get_label(provider))
 
             # custom legend
             legend_lines = [Line2D([0], [0], color=c, lw=3) for c in legend_colors]
