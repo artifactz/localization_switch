@@ -2,6 +2,7 @@
    add/remove them by modifying imports and `get_subscriber_from_string` function accordingly.'''
 
 from orbslam2_subscriber import ORBSLAM2Subscriber
+from orbslam2_pose_subscriber import ORBSLAM2PoseSubscriber
 from gps_subscriber import GPSSubscriber
 from pose_subscriber import PoseSubscriber
 from imu_subscriber import ImuSubscriber
@@ -25,6 +26,7 @@ def get_type_from_string(name):
         'PoseSubscriber': PoseSubscriber,
         'GPSSubscriber': GPSSubscriber,
         'ORBSLAM2Subscriber': ORBSLAM2Subscriber,
+        'ORBSLAM2PoseSubscriber': ORBSLAM2PoseSubscriber,
         'ImuSubscriber': ImuSubscriber,
         'PriorityController': PriorityController,
         'ImuController': ImuController

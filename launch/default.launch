@@ -2,6 +2,7 @@
     <node pkg="localization_switch" type="localization_switch_node.py" name="localization_switch" output="screen">
         <param name="output_pose_topic" value="~pose" />
         <param name="plot_pose" value="false" />
-        <param name="controller" value="{type: PriorityController, subscribers: [{type: ORBSLAM2Subscriber, timeout_reset: 5.0}, {type: PoseSubscriber, pose_topic: /pose}]}" />
+        <param name="use_initial_mavros_pose" value="true" />
+        <param name="controller" value="{type: ImuController, imu_subscriber: {type: ImuSubscriber}, subscribers: [{type: ORBSLAM2PoseSubscriber, pose_topic: /orb_slam2/pose, state_topic: /orb_slam2/state, base_link_tf: base_link, camera_tf: camera, timeout_reset: 5.0}, {type: PoseSubscriber, pose_topic: /pose, is_with_covariance: false, is_stamped: false}]}" />
     </node>
 </launch>

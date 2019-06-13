@@ -14,8 +14,10 @@ def copy_pose(pose):
 
 
 def unpack_quaternion(q):
-    ''':returns tuple: quaternion values'''
-    return q.x, q.y, q.z, q.w
+    ''':param Quaternion q: quaternion object
+       :returns: quaternion values
+       :rtype: list'''
+    return [q.x, q.y, q.z, q.w]
 
 
 def translation_rotation_to_matrix(translation, rotation):
@@ -26,12 +28,15 @@ def translation_rotation_to_matrix(translation, rotation):
 
 
 def transform_pose(pose, delta_transform):
-    '''applies a delta transform (geometry_msgs/Transform) to a pose (geometry_msgs/Pose)'''
+    '''applies a transform, e.g. the output of `get_relative_transform`,
+       to a pose intrinsically, i.e. returns `pose` * `delta_transform`
+       :type pose: Pose
+       :type delta_transform: Transform'''
     # convert to affine transformation matrices
     pose_mat = translation_rotation_to_matrix(pose.position, pose.orientation)
     trans_mat = translation_rotation_to_matrix(delta_transform.translation, delta_transform.rotation)
     # apply
-    new_pose_mat = np.dot(pose_mat, trans_mat)
+    new_pose_mat = np.dot(pose_mat, trans_mat)  # left to right: transform is applied intrinsically
     # convert back to pose
     pose.position = Vector3(*new_pose_mat[:3, 3])
     pose.orientation = Quaternion(*quaternion_from_matrix(new_pose_mat))
@@ -44,7 +49,7 @@ def get_relative_transform(ref_position, ref_orientation, translation, rotation)
     # rotation
     q1_i = quaternion_inverse(unpack_quaternion(ref_orientation))
     q2 = unpack_quaternion(rotation)
-    rotation = quaternion_multiply(q1_i, q2)
+    rotation = quaternion_multiply(q1_i, q2)  # q2 = q1 * rotation -> q1^-1 * q2 = rotation
     # translation in numpy affine
     t1 = ref_position
     t2 = translation
