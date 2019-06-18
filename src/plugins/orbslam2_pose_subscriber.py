@@ -1,7 +1,7 @@
 import rospy
 import tf2_ros
 import tf2_geometry_msgs
-from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import PoseStamped
 from tf.transformations import euler_from_quaternion
 from orb_slam2_ros.msg import ORBState
 from orb_slam2_ros.srv import ResetSystem
@@ -65,7 +65,7 @@ class ORBSLAM2PoseSubscriber(AbstractLocalizationSubscriber):
 
         # pose subscription
         self.last_cam_pose = None
-        self.sub_pose = rospy.Subscriber(self.pose_topic, Pose, self.pose_callback)
+        self.sub_pose = rospy.Subscriber(self.pose_topic, PoseStamped, self.pose_callback)
         # state subscription
         self.sub_state = rospy.Subscriber(self.state_topic, ORBState, self.state_callback)
 
@@ -94,17 +94,16 @@ class ORBSLAM2PoseSubscriber(AbstractLocalizationSubscriber):
             self.srv_reset()
             # revive subscribers
             self.sub_state = rospy.Subscriber(self.state_topic, ORBState, self.state_callback)
-            self.sub_pose = rospy.Subscriber(self.pose_topic, Pose, self.pose_callback)
+            self.sub_pose = rospy.Subscriber(self.pose_topic, PoseStamped, self.pose_callback)
             self.last_reset_time = rospy.get_rostime()
-            rospy.loginfo('ORBSLAM2Subscriber: requested system_reset')
+            rospy.loginfo('ORBSLAM2PoseSubscriber: requested system_reset')
         except (rospy.ServiceException, TypeError):   # self.srv_reset could be None
-            rospy.logerr('ORBSLAM2Subscriber: system_reset service not ready')
+            rospy.logerr('ORBSLAM2PoseSubscriber: system_reset service not ready')
 
     def pose_callback(self, msg):
         '''handles arrival of pose messages
-        :type msg: Pose
-        '''
-        cam_pose = msg
+           :type msg: PoseStamped'''
+        cam_pose = msg.pose
         if self.last_cam_pose is not None:
             # actually not the base_link poses, but camera poses from perspective of base_link frame
             last_base_pose = tf2_geometry_msgs.do_transform_pose(
@@ -132,7 +131,8 @@ class ORBSLAM2PoseSubscriber(AbstractLocalizationSubscriber):
         self.enabled = True
 
     def state_callback(self, msg):
-        '''handles arrival of ORBState messages, validates queued TFs and processes them'''
+        '''handles arrival of ORBState messages
+           :type msg: ORBState'''
         if msg.state == ORBState.OK:
             self.last_ok_time = msg.header.stamp
         else:
