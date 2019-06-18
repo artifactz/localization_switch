@@ -57,7 +57,6 @@ class ImuController(PriorityController):
         self.imu_transforms = TransformQueue(window)
         self.subscriber_transforms = []
         self.subscriber_errors = []
-        self.active_subscriber_idx = None
         super(ImuController, self).__init__(subscribers)
         self.imu_subscriber = index.build_object(imu_subscriber)
         self.imu_subscriber.set_callback(self.imu_callback)
@@ -74,11 +73,14 @@ class ImuController(PriorityController):
     def __callback__(self, subscriber_idx, delta_transform):
         '''master callback for all subscribers'''
         # store transform
-        self.subscriber_transforms[subscriber_idx].append_transform(delta_transform, rospy.get_rostime())
-        # update error
-        self.update_subscriber_error(subscriber_idx)
-        # submit an update if `is_active_subscriber`
-        super(ImuController, self).__callback__(subscriber_idx, delta_transform)
+        self.subscriber_transforms[subscriber_idx].append_transform(delta_transform, rospy.get_rostime())  # TODO: need real timestamps
+        with self.callback_mutex:
+            # update error
+            self.update_subscriber_error(subscriber_idx)
+            self.update_active_subscriber()
+            # submit an update if `is_active_subscriber`
+            if self.is_active_subscriber(subscriber_idx):
+                self.callback(delta_transform)
 
     def update_subscriber_error(self, subscriber_idx):
         '''updates the subscriber error with the mean squared error across the three euler angles wrt. IMU readings'''
@@ -94,7 +96,8 @@ class ImuController(PriorityController):
 
         rospy.loginfo_throttle(10, 'ImuController: current errors are %s' % self.subscriber_errors)
 
-        # also update which subscribers is the chosen one ("active")
+    def update_active_subscriber(self):
+        '''sets which subscriber shall be the chosen one ("active") based on error and status'''
         # first: do they actually work right now
         enabled = [sub.is_enabled() for sub in self.subscribers]
         # build list of minimum error of enabled subscribers from index to end
@@ -115,13 +118,8 @@ class ImuController(PriorityController):
                             'ImuController: choosing %s despite err > threshold (lowest fallback error: %.4f)'
                             % (type(self.subscribers[i]).__name__, min_err[i + 1])
                         )
-                    if self.active_subscriber_idx != i:
-                        rospy.loginfo('ImuController: active subscriber is now %s' % type(self.subscribers[i]).__name__)
-                    self.active_subscriber_idx = i
+                    if not self.is_active_subscriber(i):
+                        self.switch_subscriber(i)
                     return
         # all subscribers are inactive
         self.active_subscriber_idx = None
-
-    def is_active_subscriber(self, subscriber_idx):
-        ''':returns bool: True iff the specified subscriber is the one to use'''
-        return subscriber_idx == self.active_subscriber_idx

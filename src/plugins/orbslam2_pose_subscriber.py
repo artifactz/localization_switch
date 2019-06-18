@@ -2,7 +2,6 @@ import rospy
 import tf2_ros
 import tf2_geometry_msgs
 from geometry_msgs.msg import PoseStamped
-from tf.transformations import euler_from_quaternion
 from orb_slam2_ros.msg import ORBState
 from orb_slam2_ros.srv import ResetSystem
 
@@ -12,17 +11,11 @@ from plugin_base import AbstractLocalizationSubscriber, get_relative_transform, 
 import plotting
 
 
-def print_pose(pose):
-    q = pose.orientation
-    p = pose.position
-    print [p.x, p.y, p.z], euler_from_quaternion([q.x, q.y, q.z, q.w])
-
-
 class ORBSLAM2PoseSubscriber(AbstractLocalizationSubscriber):
     '''subscribes to the ORBSLAM2 Pose topic and hands in delta transforms to its callback'''
     def __init__(self, pose_topic='/orb_slam2/pose', state_topic='/orb_slam2/state', base_link_tf='base_link',
                  camera_tf='camera', timeout_reset=5., **kwargs):
-        '''`timeout_reset`: sets after how many seconds of ORBState.LOST to call a system_reset'''
+        ''':param float timeout_reset: after how many seconds of ORBState.LOST to call a system_reset'''
         super(ORBSLAM2PoseSubscriber, self).__init__(**kwargs)
         self.enabled = False
         # params
@@ -104,6 +97,8 @@ class ORBSLAM2PoseSubscriber(AbstractLocalizationSubscriber):
         '''handles arrival of pose messages
            :type msg: PoseStamped'''
         cam_pose = msg.pose
+
+        # two camera poses are available
         if self.last_cam_pose is not None:
             # actually not the base_link poses, but camera poses from perspective of base_link frame
             last_base_pose = tf2_geometry_msgs.do_transform_pose(
@@ -118,17 +113,17 @@ class ORBSLAM2PoseSubscriber(AbstractLocalizationSubscriber):
             delta_transform = get_relative_transform(
                 last_base_pose.position, last_base_pose.orientation, base_pose.position, base_pose.orientation)
 
+            # everything seems to be working fine
+            if not self.enabled:
+                rospy.loginfo('ORBSLAM2PoseSubscriber enabled')
+                self.enabled = True
+
             # hand in the update
             self.callback(delta_transform)
             if self.do_plot:
-                plotting.add_pose(self, delta_transform)
+                plotting.add_transform(self, delta_transform)
 
         self.last_cam_pose = cam_pose
-        # everything seems to be working fine
-        if not self.enabled:
-            rospy.loginfo('ORBSLAM2PoseSubscriber enabled')
-            # TODO: store current IMU orientation here
-        self.enabled = True
 
     def state_callback(self, msg):
         '''handles arrival of ORBState messages

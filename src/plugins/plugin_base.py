@@ -62,7 +62,7 @@ def get_relative_transform(ref_position, ref_orientation, translation, rotation)
     )
 
 
-class TransformProvider(object):
+class AbstractTransformProvider(object):
     '''base class for anything that can hand in delta transforms (subscribers and controllers at the moment)'''
     def __init__(self):
         self.callback = None
@@ -72,14 +72,33 @@ class TransformProvider(object):
         self.callback = callback
 
 
-class AbstractLocalizationSubscriber(TransformProvider):
+class AbstractController(AbstractTransformProvider):
+    '''base class for controllers'''
+    def __init__(self):
+        super(AbstractController, self).__init__()
+        self.orientation_setter = None
+
+    def set_callback(self, callback):
+        super(AbstractController, self).set_callback(callback)
+
+    def set_orientation_setter(self, orientation_setter):
+        ''':param function orientation_setter: function to set an absolute orientation, e.g. when switching
+                                               subscribers, to avoid position drift'''
+        self.orientation_setter = orientation_setter
+
+
+class AbstractLocalizationSubscriber(AbstractTransformProvider):
     '''base class for subscribers'''
-    def __init__(self, plot=False, alias=None):
-        ''':param plot: flags this subscriber to be drawn in the plot
+    def __init__(self, is_global_orientation=False, plot=False, alias=None):
+        ''':param is_global_orientation: flags this subscriber to provide absolute (IMU-like) orientation
+           :param plot: flags this subscriber to be drawn in the plot
            :param alias: if set, uses this string instead of the type name to label the subscriber'''
         super(AbstractLocalizationSubscriber, self).__init__()
+        self.is_global_orientation = is_global_orientation
         self.do_plot = plot
         self.alias = alias
+        if self.is_global_orientation:
+            self.global_orientation = None
         if self.do_plot:
             plotting.start()
 

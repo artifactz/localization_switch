@@ -40,7 +40,7 @@ class GPSSubscriber(AbstractLocalizationSubscriber):
 
         if self.do_plot and initial_heading != 0.:
             q = Quaternion(*quaternion_from_euler(0, 0, initial_heading))
-            plotting.add_pose(self, Transform(translation=Vector3(0., 0., 0.), rotation=q))
+            plotting.add_transform(self, Transform(translation=Vector3(0., 0., 0.), rotation=q))
 
     def is_enabled(self):
         '''GPS is only used for plotting'''
@@ -65,6 +65,6 @@ class GPSSubscriber(AbstractLocalizationSubscriber):
         # hand in the update
         self.callback(delta_transform)
         if self.do_plot:
-            plotting.add_pose(self, delta_transform)
+            plotting.add_transform(self, delta_transform)
 
         self.last_position = position

@@ -2,9 +2,9 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import threading
 
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, Quaternion
 
-from plugin_base import copy_pose, transform_pose, AbstractLocalizationSubscriber
+from plugin_base import copy_pose, transform_pose, AbstractLocalizationSubscriber, unpack_quaternion
 
 
 color_palette = iter(['#0055AA', '#CC0022', '#DDB800', '#007728', '#009FEE', '#AA008E'])
@@ -17,21 +17,41 @@ class Plotter(object):
         # status (whether it's been used as the internal pose) of all subscriber poses over the course of time
         self.enabled_history = {}
 
-    def add_pose(self, provider, delta_transform):
-        ''':param provider: subscriber or anything, mainly used as an identifier
+    def add_transform(self, provider, delta_transform):
+        '''adds a delta transform to a trajectory
+           :param provider: subscriber or anything, mainly used as a trajectory identifier
            :param geometry_msgs.msg.Transform delta_transform: pose update'''
-        if provider not in self.pose_history:
-            self.pose_history[provider] = [Pose()]  # TODO: orientation 0,0,0,1?
-            self.enabled_history[provider] = [False]
-            self.color[provider] = color_palette.next()
+        self.check_provider_exists(provider)
         # transform last pose to get the current one
         pose = copy_pose(self.pose_history[provider][-1])
         transform_pose(pose, delta_transform)
         # store
+        self.__add_pose__(provider, pose)
+
+    def add_orientation(self, provider, orientation):
+        '''adds a global/extrinsic/absolute orientation to a trajectory
+           :param provider: subscriber or anything, mainly used as a trajectory identifier
+           :type orientation: Quaternion'''
+        self.check_provider_exists(provider)
+        # copy last pose and overwrite orientation
+        pose = copy_pose(self.pose_history[provider][-1])
+        pose.orientation = Quaternion(*unpack_quaternion(orientation))
+        # store
+        self.__add_pose__(provider, pose)
+
+    def __add_pose__(self, provider, pose):
+        '''adds a pose to a trajectory'''
         self.pose_history[provider].append(pose)
         # use enabled=True for anything else than subscribers to not draw them gray
         enabled = provider.is_enabled() if isinstance(provider, AbstractLocalizationSubscriber) else True
         self.enabled_history[provider].append(enabled)
+
+    def check_provider_exists(self, provider):
+        '''initializes a trajectory if it does not exist yet'''
+        if provider not in self.pose_history:
+            self.pose_history[provider] = [Pose(orientation=Quaternion(w=1))]
+            self.enabled_history[provider] = [False]
+            self.color[provider] = color_palette.next()
 
     def get_plot_color(self, provider, enabled):
         ''':returns str: a provider's color'''
@@ -109,7 +129,13 @@ def start():
     plot_thread.start()
 
 
-def add_pose(provider, delta_transform):
+def add_transform(provider, delta_transform):
     ''':param provider: subscriber, controller or anything hashable
-       :param geometry_msgs.msg.Transform delta_transform: update'''
-    __plotter__.add_pose(provider, delta_transform)
+       :param geometry_msgs.msg.Transform delta_transform: pose update'''
+    __plotter__.add_transform(provider, delta_transform)
+
+
+def add_orientation(provider, orientation):
+    ''':param provider: subscriber, controller or anything hashable
+       :param Quaternion orientation: absolute/global/extrinsic orientation'''
+    __plotter__.add_orientation(provider, orientation)

@@ -114,7 +114,7 @@ class ORBSLAM2Subscriber(AbstractLocalizationSubscriber):
                 # hand in the update
                 self.callback(delta_transform)
                 if self.do_plot:
-                    plotting.add_pose(self, delta_transform)
+                    plotting.add_transform(self, delta_transform)
 
                 rospy.logdebug('ORBSLAM2Subscriber: tf processed')
 

@@ -8,7 +8,7 @@ import sys
 
 import plugins.plotting
 import plugins.index
-from plugins.plugin_base import transform_pose
+from plugins.plugin_base import transform_pose, unpack_quaternion
 
 
 def get_mavros_pose():
@@ -25,13 +25,17 @@ def get_mavros_pose():
 
 class PoseManager(object):
     '''holds the root controller, keeps track of an internal pose and calls a callback on every update'''
-    def __init__(self, controller, pose=None, callback=None, plot_pose=False):
+    def __init__(self, controller, pose=None, callback=None, set_global_orientation=False, plot_pose=False):
         ''':param controller: controller to be used containing all necessary subscribers
            :param geometry_msgs.msg.Pose pose: initial pose (`None` initializes to 0-pose)
            :param function callback: function of :class:`Pose` to call on every update
+           :param bool set_global_orientation: whether to sync the internal orientation with a subscriber providing a
+                                               global orientation before using its pose updates
            :param bool plot_pose: whether to plot the internal pose'''
         self.controller = controller
         self.controller.set_callback(self.__callback__)
+        if set_global_orientation:
+            self.controller.set_orientation_setter(self.__set_orientation__)
         # pose to which the updates are applied
         if pose is None:
             self.pose = Pose()  # orientation may be all 0, which is ok (`quaternion_matrix` still returns id)
@@ -48,7 +52,7 @@ class PoseManager(object):
            :param geometry_msgs.msg.Transform delta_transform: pose update'''
         transform_pose(self.pose, delta_transform)
         if self.do_plot:
-            plugins.plotting.add_pose(self, delta_transform)
+            plugins.plotting.add_transform(self, delta_transform)
 
     def __callback__(self, delta_transform):
         '''receives updates from the controller
@@ -58,6 +62,15 @@ class PoseManager(object):
         # trigger publisher callback
         if self.callback:
             self.callback(self.pose)
+
+    def __set_orientation__(self, orientation):
+        '''updates the orientation independently of the current pose
+           :param Quaternion orientation: absolute orientation'''
+        # copy values
+        self.pose.orientation = Quaternion(*unpack_quaternion(orientation))
+        if self.do_plot:
+            plugins.plotting.add_orientation(self, orientation)
+        rospy.loginfo("orientation set to global")
 
 
 class LocalizationSwitchNode(object):
@@ -69,6 +82,7 @@ class LocalizationSwitchNode(object):
         plot_pose = rospy.get_param('~plot_pose', False)
         yaml_string = rospy.get_param('~controller', '')
         use_initial_mavros_pose = rospy.get_param('~use_initial_mavros_pose', True)
+        set_global_orientation = rospy.get_param('~set_global_orientation', False)
 
         if use_initial_mavros_pose:
             initial_pose = get_mavros_pose()
@@ -83,6 +97,7 @@ class LocalizationSwitchNode(object):
                 pose=initial_pose,
                 controller=controller,
                 callback=self.pose_callback,
+                set_global_orientation=set_global_orientation,
                 plot_pose=plot_pose
             )
         else:
