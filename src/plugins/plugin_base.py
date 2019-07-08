@@ -54,7 +54,7 @@ def get_relative_transform(ref_position, ref_orientation, translation, rotation)
     t1 = ref_position
     t2 = translation
     delta_translation = np.asarray([t2.x - t1.x, t2.y - t1.y, t2.z - t1.z, 1])
-    # rotate translation
+    # rotate translation (from being absolute to being relative to `ref_orientation`)
     delta_translation = np.dot(quaternion_matrix(q1_i), delta_translation)
     return Transform(
         translation=Vector3(*delta_translation[:3]),

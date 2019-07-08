@@ -29,11 +29,10 @@ def latlon_to_dxdy(lat1, lon1, lat2, lon2):
 class GPSSubscriber(AbstractLocalizationSubscriber):
     '''subscribes to a NavSatFix topic and hands in delta transforms to its callback.
        lacks rotation due to the input only being GPS.'''
-    def __init__(self, initial_heading=0., **kwargs):
+    def __init__(self, gps_topic='/mavros/global_position/global', initial_heading=0., **kwargs):
         super(GPSSubscriber, self).__init__(**kwargs)
         # params
-        self.gps_topic = '/mavros/global_position/global'
-        self.sub_gps = rospy.Subscriber(self.gps_topic, NavSatFix, self.gps_callback)
+        self.gps_topic = gps_topic
 
         self.orig_ll = None
         self.last_position = Vector3()
@@ -41,6 +40,8 @@ class GPSSubscriber(AbstractLocalizationSubscriber):
         if self.do_plot and initial_heading != 0.:
             q = Quaternion(*quaternion_from_euler(0, 0, initial_heading))
             plotting.add_transform(self, Transform(translation=Vector3(0., 0., 0.), rotation=q))
+
+        self.sub_gps = rospy.Subscriber(self.gps_topic, NavSatFix, self.gps_callback)
 
     def is_enabled(self):
         '''GPS is only used for plotting'''

@@ -10,6 +10,13 @@ from plugin_base import copy_pose, transform_pose, AbstractLocalizationSubscribe
 color_palette = iter(['#0055AA', '#CC0022', '#DDB800', '#007728', '#009FEE', '#AA008E'])
 
 
+def get_label(provider):
+    '''figures out a neat string to be used as a plot label for a trajectory
+       :param provider: any trajectory identifier, probably a TransformProvider
+       :rtype: str'''
+    return provider.alias if hasattr(provider, 'alias') and provider.alias is not None else type(provider).__name__
+
+
 class Plotter(object):
     def __init__(self):
         self.pose_history = {}
@@ -58,9 +65,6 @@ class Plotter(object):
         # TODO: figure out a way to display active/enabled...
         return self.color[provider] if enabled else 'gray'
 
-    def get_label(self, provider):
-        return provider.alias if hasattr(provider, 'alias') and provider.alias is not None else type(provider).__name__
-
     def __plot_positions__(self, provider, start_idx=0, end_idx=None, enabled=True):
         '''helper function: dispatches a plot call for a path segment'''
         if end_idx is None:
@@ -101,7 +105,7 @@ class Plotter(object):
                     prev_enabled = enabled
 
                 legend_colors.append(self.get_plot_color(provider, True))
-                legend_labels.append(self.get_label(provider))
+                legend_labels.append(get_label(provider))
 
             # custom legend
             legend_lines = [Line2D([0], [0], color=c, lw=3) for c in legend_colors]

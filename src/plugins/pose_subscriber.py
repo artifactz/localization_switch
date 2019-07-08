@@ -17,7 +17,14 @@ class PoseSubscriber(AbstractLocalizationSubscriber):
         self.enabled = False
         # params
         self.pose_topic = pose_topic
-        # pose type
+
+        # set up IMU subscriber when needed
+        if self.is_roll_pitch_imu:
+            self.imu_subscriber = index.build_object(imu_subscriber)
+
+        self.last_pose = None
+
+        # choose matching pose type for the subscriber to use
         self.is_with_covariance = is_with_covariance
         self.is_stamped = is_stamped
         if is_with_covariance:
@@ -25,12 +32,6 @@ class PoseSubscriber(AbstractLocalizationSubscriber):
         else:
             pose_type = PoseStamped if is_stamped else Pose
         self.sub_pose = rospy.Subscriber(self.pose_topic, pose_type, self.pose_callback)
-
-        # set up IMU subscriber when needed
-        if self.is_roll_pitch_imu:
-            self.imu_subscriber = index.build_object(imu_subscriber)
-
-        self.last_pose = None
 
     def is_enabled(self):
         return self.enabled

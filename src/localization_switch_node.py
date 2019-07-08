@@ -32,15 +32,16 @@ class PoseManager(object):
            :param bool set_global_orientation: whether to sync the internal orientation with a subscriber providing a
                                                global orientation before using its pose updates
            :param bool plot_pose: whether to plot the internal pose'''
-        self.controller = controller
-        self.controller.set_callback(self.__callback__)
-        if set_global_orientation:
-            self.controller.set_orientation_setter(self.__set_orientation__)
         # pose to which the updates are applied
         if pose is None:
             self.pose = Pose()  # orientation may be all 0, which is ok (`quaternion_matrix` still returns id)
         else:
             self.pose = pose
+        # start controller
+        self.controller = controller
+        self.controller.set_callback(self.__callback__)
+        if set_global_orientation:
+            self.controller.set_orientation_setter(self.__set_orientation__)
         # external (publisher) callback function to call
         self.callback = callback
         self.do_plot = plot_pose
@@ -79,6 +80,7 @@ class LocalizationSwitchNode(object):
         rospy.init_node('localization_switch_node')  # log_level=rospy.DEBUG
         # params
         output_pose_topic = rospy.get_param('~output_pose_topic', '~pose')
+        self.pose_frame_id = rospy.get_param('~output_pose_frame_id', 'world')
         plot_pose = rospy.get_param('~plot_pose', False)
         yaml_string = rospy.get_param('~controller', '')
         use_initial_mavros_pose = rospy.get_param('~use_initial_mavros_pose', True)
@@ -111,7 +113,7 @@ class LocalizationSwitchNode(object):
         # just publish the pose
         pose_stamped = PoseStamped()
         pose_stamped.header.stamp = rospy.get_rostime()  # TODO: real timestamps would be nice
-        pose_stamped.header.frame_id = 'world'
+        pose_stamped.header.frame_id = self.pose_frame_id
         pose_stamped.pose = pose
         self.pub_pose.publish(pose_stamped)
 
