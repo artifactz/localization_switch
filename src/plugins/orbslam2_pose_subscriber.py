@@ -30,28 +30,10 @@ class ORBSLAM2PoseSubscriber(AbstractLocalizationSubscriber):
         threading.Thread(target=self.__init_services__).start()
 
         # get TFs once
+        self.has_tfs = False
         self.base_link_to_camera_tf = None
         self.camera_to_base_link_tf = None
-        tf_buffer = tf2_ros.Buffer()
-        tf_listener = tf2_ros.TransformListener(tf_buffer)
-        nb_fails = 0
-        while self.base_link_to_camera_tf is None and self.camera_to_base_link_tf is None:
-            try:
-                if self.base_link_to_camera_tf is None:
-                    self.base_link_to_camera_tf = tf_buffer.lookup_transform(
-                        self.base_link_tf, self.camera_tf, rospy.Time(0), rospy.Duration(.25)
-                    )
-                if self.camera_to_base_link_tf is None:
-                    self.camera_to_base_link_tf = tf_buffer.lookup_transform(
-                        self.camera_tf, self.base_link_tf, rospy.Time(0), rospy.Duration(.25)
-                    )
-            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-                nb_fails += 1
-                if nb_fails >= 5:
-                    rospy.logwarn_throttle(10, 'ORBSLAM2PoseSubscriber: unable to determine camera TF, retrying...')
-        tf_listener.unregister()
-
-        rospy.loginfo('ORBSLAM2PoseSubscriber: camera TF OK')
+        threading.Thread(target=self.__init_tfs__).start()
 
         self.last_ok_time = None
         self.last_reset_time = None
@@ -67,9 +49,35 @@ class ORBSLAM2PoseSubscriber(AbstractLocalizationSubscriber):
 
     def __init_services__(self):
         '''waits and initializes service proxies'''
-        rospy.wait_for_service('/orb_slam2/reset_system')
-        self.srv_reset = rospy.ServiceProxy('/orb_slam2/reset_system', ResetSystem)
-        rospy.loginfo('ORBSLAM2PoseSubscriber: system_reset service OK')
+        try:
+            rospy.wait_for_service('/orb_slam2/reset_system')
+            self.srv_reset = rospy.ServiceProxy('/orb_slam2/reset_system', ResetSystem)
+            rospy.loginfo('ORBSLAM2PoseSubscriber: system_reset service OK')
+        except rospy.ROSInterruptException:
+            pass
+
+    def __init_tfs__(self):
+        '''looks up camera/base_link TFs'''
+        tf_buffer = tf2_ros.Buffer()
+        tf_listener = tf2_ros.TransformListener(tf_buffer)
+        nb_fails = 0
+        while not self.has_tfs and not rospy.is_shutdown():
+            try:
+                if self.base_link_to_camera_tf is None:
+                    self.base_link_to_camera_tf = tf_buffer.lookup_transform(
+                        self.base_link_tf, self.camera_tf, rospy.Time(0), rospy.Duration(.25)
+                    )
+                if self.camera_to_base_link_tf is None:
+                    self.camera_to_base_link_tf = tf_buffer.lookup_transform(
+                        self.camera_tf, self.base_link_tf, rospy.Time(0), rospy.Duration(.25)
+                    )
+                self.has_tfs = True
+                rospy.loginfo('ORBSLAM2PoseSubscriber: camera TF OK')
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+                nb_fails += 1
+                if nb_fails >= 5:
+                    rospy.logwarn_throttle(10, 'ORBSLAM2PoseSubscriber: unable to determine camera TF, retrying...')
+        tf_listener.unregister()
 
     def disable(self):
         if self.enabled:
@@ -98,8 +106,8 @@ class ORBSLAM2PoseSubscriber(AbstractLocalizationSubscriber):
            :type msg: PoseStamped'''
         cam_pose = msg.pose
 
-        # two camera poses are available
-        if self.last_cam_pose is not None:
+        # two camera poses and TFs are available
+        if self.last_cam_pose is not None and self.has_tfs:
             # actually not the base_link poses, but camera poses from perspective of base_link frame
             last_base_pose = tf2_geometry_msgs.do_transform_pose(
                 PoseStamped(pose=self.last_cam_pose), self.base_link_to_camera_tf).pose
@@ -123,7 +131,9 @@ class ORBSLAM2PoseSubscriber(AbstractLocalizationSubscriber):
             if self.do_plot:
                 plotting.add_transform(self, delta_transform)
 
-        self.last_cam_pose = cam_pose
+        # delay poses until TFs initialized
+        if self.last_cam_pose is None or self.has_tfs:
+            self.last_cam_pose = cam_pose
 
     def state_callback(self, msg):
         '''handles arrival of ORBState messages
