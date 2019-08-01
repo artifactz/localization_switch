@@ -88,6 +88,7 @@ class LocalizationSwitchNode(object):
 
         if use_initial_mavros_pose:
             initial_pose = get_mavros_pose()
+            rospy.loginfo('received MAVROS local_origin -> fcu TF')
         else:
             initial_pose = None
 
