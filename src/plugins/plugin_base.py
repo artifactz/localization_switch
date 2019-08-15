@@ -105,3 +105,6 @@ class AbstractLocalizationSubscriber(AbstractTransformProvider):
     def is_enabled(self):
         '''whether to use this subscriber or not'''
         raise NotImplementedError
+
+    def __str__(self):
+        return type(self).__name__ if self.alias is None else self.alias

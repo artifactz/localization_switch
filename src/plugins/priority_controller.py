@@ -55,7 +55,7 @@ class PriorityController(AbstractController):
         '''sets the currently active subscriber by index'''
         assert(self.active_subscriber_idx != subscriber_idx)
         self.active_subscriber_idx = subscriber_idx
-        rospy.loginfo('Controller: active subscriber is now %s' % type(self.subscribers[subscriber_idx]).__name__)
+        rospy.loginfo('Controller: active subscriber is now %s' % self.subscribers[subscriber_idx])
         # refresh global orientation if possible
         if self.subscribers[subscriber_idx].is_global_orientation and self.orientation_setter is not None:
             self.orientation_setter(self.subscribers[subscriber_idx].global_orientation)
