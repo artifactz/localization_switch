@@ -13,14 +13,15 @@ import plotting
 
 class ORBSLAM2PoseSubscriber(AbstractLocalizationSubscriber):
     '''subscribes to the ORBSLAM2 Pose topic and hands in delta transforms to its callback'''
-    def __init__(self, pose_topic='/orb_slam2/pose', state_topic='/orb_slam2/state', base_link_tf='base_link',
-                 camera_tf='camera', timeout_reset=5., **kwargs):
+    def __init__(self, pose_topic='orb_slam2/pose', state_topic='orb_slam2/state', reset_service_name='orb_slam2/reset_system',
+                 base_link_tf='base_link', camera_tf='camera', timeout_reset=5., **kwargs):
         ''':param float timeout_reset: after how many seconds of ORBState.LOST to call a system_reset'''
         super(ORBSLAM2PoseSubscriber, self).__init__(**kwargs)
         self.enabled = False
         # params
         self.pose_topic = pose_topic
         self.state_topic = state_topic
+        self.reset_service_name = reset_service_name
         self.timeout_reset = timeout_reset
         self.base_link_tf = base_link_tf.strip('/')  # TF2 doesn't like frame names starting with "/"
         self.camera_tf = camera_tf.strip('/')
@@ -50,8 +51,8 @@ class ORBSLAM2PoseSubscriber(AbstractLocalizationSubscriber):
     def __init_services__(self):
         '''waits and initializes service proxies'''
         try:
-            rospy.wait_for_service('/orb_slam2/reset_system')
-            self.srv_reset = rospy.ServiceProxy('/orb_slam2/reset_system', ResetSystem)
+            rospy.wait_for_service(self.reset_service_name)
+            self.srv_reset = rospy.ServiceProxy(self.reset_service_name, ResetSystem)
             rospy.loginfo('ORBSLAM2PoseSubscriber: system_reset service OK')
         except rospy.ROSInterruptException:
             pass
