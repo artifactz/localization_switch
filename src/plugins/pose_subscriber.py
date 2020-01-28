@@ -6,11 +6,14 @@ from plugin_base import AbstractLocalizationSubscriber, get_relative_transform, 
 import index
 import plotting
 
+import threading
+import time
+
 
 class PoseSubscriber(AbstractLocalizationSubscriber):
     '''subscribes to a PoseWithCovarianceStamped topic and hands in delta transforms to its callback'''
     def __init__(self, pose_topic='/pose', is_with_covariance=False, is_stamped=False, imu_subscriber=None,
-                 timeout=1., **kwargs):  # TODO: implement timeout
+                 timeout=0.5, **kwargs):
         ''':param dict imu_subscriber: ImuSubscriber yaml constructor dictionary'''
         self.is_roll_pitch_imu = imu_subscriber is not None
         super(PoseSubscriber, self).__init__(is_global_orientation=self.is_roll_pitch_imu, **kwargs)
@@ -23,6 +26,7 @@ class PoseSubscriber(AbstractLocalizationSubscriber):
             self.imu_subscriber = index.build_object(imu_subscriber)
 
         self.last_pose = None
+        self.last_pose_time = None
 
         # choose matching pose type for the subscriber to use
         self.is_with_covariance = is_with_covariance
@@ -33,8 +37,23 @@ class PoseSubscriber(AbstractLocalizationSubscriber):
             pose_type = PoseStamped if is_stamped else Pose
         self.sub_pose = rospy.Subscriber(self.pose_topic, pose_type, self.pose_callback)
 
+        # spawn timeout checker thread
+        t = threading.Thread(target=self.check_timeout, args=(timeout,))
+        t.daemon = True
+        t.start()
+
     def is_enabled(self):
         return self.enabled
+
+    def check_timeout(self, interval=0.5):
+        while True:
+            t0 = self.last_pose_time
+            time.sleep(interval)
+            if t0 == self.last_pose_time:  # didn't receive any new data
+                # disable
+                self.enabled = False
+                self.last_pose = None
+                self.last_pose_time = None
 
     def pose_callback(self, msg):
         '''handles arrival of pose messages'''
@@ -70,3 +89,4 @@ class PoseSubscriber(AbstractLocalizationSubscriber):
                 plotting.add_transform(self, delta_transform)
 
         self.last_pose = pose
+        self.last_pose_time = stamp
